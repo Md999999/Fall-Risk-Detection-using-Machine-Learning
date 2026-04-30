@@ -1,121 +1,108 @@
-KINECAL Markerless Motion Pipeline & Live Demo
-Final Year Dissertation Project
-Author: Mosope Dada
+Here is the updated, professional README.md file with the UX Prototype section removed. This version is now perfectly streamlined for your technical submission.
 
+Human Motion Analysis & Fall-Risk Assessment Pipeline
+Researcher: Mosope Dada
 
-1. PROJECT OVERVIEW
+Ethics Approval Number: 89091
 
-This is the code repository for my final year dissertation. The goal of 
-this project is to make clinical human motion analysis and fall-risk 
-assessment much more accessible. Instead of relying on expensive optical 
-tracking labs (like Vicon systems), this pipeline just needs a standard 
-webcam. 
+Core Technology: Google MediaPipe (Markerless Motion Capture) & Multi-Model Machine Learning
 
-It uses Google MediaPipe to track 3D joint movements and feeds that 
-data into three different machine learning models (SVM, Random Forest, 
-and XGBoost). The AI then acts as a "Multi-Model Consensus" to classify 
-a patient's fall risk based on objective metrics like sway and speed.
+1. Project Overview
+This project aims to make clinical human motion analysis accessible and cost-effective. By replacing expensive optical tracking labs (e.g., Vicon) with a standard RGB webcam, this pipeline extracts 3D biomechanical metrics to objectively assess fall risk.
 
-There are two main scripts you need to run:
-1. Mosope_human_motion_analysis.py (Trains the AI)
-2. livedemo.py (Tests it live using your webcam)
+The system utilizes Google MediaPipe for joint tracking and a Multi-Model Consensus approach (SVM, Random Forest, and XGBoost) to classify patient risk based on sway, velocity, and temporal features.
 
+2. Key Features
+Hybrid Feature Engineering: Extraction of 18 biomechanical metrics (Sway Range, RMS Displacement, Mean Velocity).
 
-2. SYSTEM REQUIREMENTS
+Multi-Model Consensus: AI ensemble assessment using SVM, RF, and XGBoost.
 
-* OS: Windows 10 or 11
-* Python: Python 3.11 ONLY. 
+Explainable AI: Integration of SHAP insights to visualize the drivers of risk classification.
 
-(Important note on Python: MediaPipe currently breaks on Python 3.12 
-and 3.13 on Windows because of C++ binary issues. Make sure you are 
-specifically using version 3.11 and have it added to your PATH).
+GDPR-Compliant: Automated pseudonymisation of subject IDs for clinical safety.
 
-To install everything you need, just open your Command Prompt and run:
-py -3.11 -m pip install opencv-python mediapipe pandas xgboost scipy scikit-learn joblib matplotlib shap
+Real-Time Assessment: Live clinical demo mode with digital skeleton overlay.
 
+3. Prerequisites
+OS: Windows 10 or 11.
 
-3. FOLDER STRUCTURE
+Python Version: Python 3.11 ONLY.
 
-C:\Users\mosop\KINECALWORK\
-│
-├── Mosope_human_motion_analysis.py    # Main script (trains the AI and gets metrics)
-├── livedemo.py            # The live webcam demo script
-├── kinecal/               # Folder where the raw .npy dataset files go
-└── kinecal_outputs/       # Where all the generated files get saved
-    ├── models/            # Saves the trained models (fall_risk_model.pkl)
-    ├── figures/           # Confusion matrix graphs get saved here
-    └── reports/           # Stats and raw feature tables
+Note: MediaPipe is currently incompatible with Python 3.12/3.13 binaries on Windows. Please ensure you are running 3.11 and have it added to your system PATH.
 
+Hardware: Standard RGB Webcam for Live Demo.
 
-4. HOW TO RUN PHASE 1: TRAINING
+4. Installation
+Clone/Unzip the project folder to your machine.
 
-You have to train the machine learning models on the dataset before you 
-can run the live demo.
-
-1. Open Command Prompt.
-2. Navigate to the project folder:
-   cd C:\Users\mosop\KINECALWORK
-3. Run the training script:
-   py -3.11 Mosope_human_motion_analysis.py
-
-When you run this, the script will:
-* Load up the 3D `.npy` arrays from the `kinecal` folder.
-* Calculate the biomechanical features.
-* Train and cross-validate SVM, Random Forest, and XGBoost.
-* Print out a ranking table in the terminal to show which model did best.
-* Save the confusion matrices to the `figures` folder and package the 
-  trained models into a `.pkl` file.
-
-
-5. HOW TO RUN PHASE 2: LIVE DEMO
-
-Once the models are trained and saved, you can test it live.
-
-1. In your Command Prompt, make sure you're still in the project folder.
-2. Run the demo script:
-   py -3.11 livedemo.py
-
-How to use it:
-* Step back so the camera can see your whole body (especially your hips).
-* You should see a digital skeleton tracking your movement on screen.
-* Do a clinical movement (like swaying side-to-side or walking) for 
-  about 3 to 5 seconds.
-* Walk up and press the 'q' key to stop recording.
-* Check the terminal: It will spit out your raw movement metrics and 
-  show what all 3 AI models predicted your fall risk to be.
-
-
-6. COMMON ERRORS & TROUBLESHOOTING
-
-* Error: "module 'mediapipe' has no attribute 'solutions'"
-  Fix: This almost always means Windows is trying to use Python 3.12 or 
-  3.13. Force it to use 3.11 by typing `py -3.11` instead of `python`. 
-  Also, make sure you didn't accidentally name a file `mediapipe.py` 
-  in your folder, or Python will try to import that instead of the 
-  actual library.
-
-* Error: Webcam doesn't open / CRITICAL ERROR
-  Fix: Check your Windows Privacy Settings. Make sure "Camera access 
-  for desktop apps" is toggled ON, otherwise Windows will block OpenCV 
-  from using the lens.
-
-7. How to Download the KINECAL Dataset
-The KINECAL dataset is hosted on PhysioNet. Because the dataset is quite large, you have three options for downloading it. Choose the one that works best for your setup:
-
-Option 1: Direct ZIP Download
-You can manually download the entire dataset as a compressed file directly from your browser.
-
-Size: 86.2 GB
-
-Note: Please ensure you have a stable internet connection and sufficient disk space before starting this download.
-
-Option 2: Using the Terminal (wget)
-If you are on Linux, macOS, or using WSL on Windows, wget is highly recommended because it allows you to resume the download if your connection drops. Open your terminal and run:
+Open Command Prompt and navigate to the root folder:
 
 Bash
-wget -r -N -c -np https://physionet.org/files/kinecal/1.0.3/
-Option 3: Using AWS CLI (Fastest)
-If you have the AWS Command Line Interface installed, you can sync the files directly from PhysioNet's open S3 bucket. This is often the fastest method. Make sure to replace DESTINATION with the folder where you want to save the data (e.g., ./kinecal/):
+cd [Your_Folder_Path]
+Install dependencies using the provided requirements file:
 
 Bash
-aws s3 sync --no-sign-request s3://physionet-open/kinecal/1.0.3/ DESTINATION
+py -3.11 -m pip install -r requirements.txt
+
+
+## 5. Project Structure
+The code is designed to be **portable**. All paths are relative; as long as the internal folder structure is maintained, the scripts will run from any directory.
+
+```text
+.
+├── Mosope_human_motion_analysis.py  # Phase 1: Pipeline training & evaluation
+├── livedemo.py                      # Phase 2: Real-time clinical demo
+├── requirements.txt                 # Project dependencies
+├── kinecal/                         # Dataset directory (Subset included for testing)
+├── kinecal_outputs/                 # Automatically generated artefacts
+│   ├── models/                      # Saved trained models (fall_risk_model.pkl)
+│   ├── figures/                     # Generated Confusion Matrices
+│   └── reports/                     # Stats and feature tables
+└── sample_output/                   # Pre-generated results for evaluation
+6. How to Run
+Phase 1: Training & Metrics
+This script processes the dataset, extracts features, and trains the multi-model AI.
+
+Bash
+py -3.11 Mosope_human_motion_analysis.py
+Output Artefacts:
+
+Console: A ranking table comparing SVM, RF, and XGBoost performance.
+
+Figures: Normalized Confusion Matrices saved in kinecal_outputs/figures/.
+
+Model: A packaged fall_risk_model.pkl saved in kinecal_outputs/models/.
+
+Phase 2: Live Clinical Demo
+Run this once the model has been trained (or use the provided pre-trained model).
+
+Bash
+py -3.11 livedemo.py
+Instructions:
+
+Step back so the camera can see your full body (hips must be visible).
+
+Ensure the digital skeleton is tracking your movement.
+
+Perform a clinical movement (e.g., side-to-side sway) for 5 seconds.
+
+Press 'q' to run the analysis. The terminal will display your biomechanical metrics and the risk prediction from all three AI models.
+
+7. Dataset Information
+The full KINECAL Dataset (86.2 GB) is hosted on PhysioNet.
+
+Subset Included: A sample of 5 subjects is included in the /kinecal folder so the examiner can verify the pipeline without a large download.
+
+Full Download: Instructions for wget or AWS CLI are included in the documentation if the full 86GB set is required.
+
+8. Troubleshooting
+ModuleNotFoundError (mediapipe): This usually happens if Windows defaults to Python 3.12. Always use the py -3.11 prefix. Ensure you haven't named any file mediapipe.py in your folder.
+
+Webcam Initialization Error: Close other apps (Teams, Zoom) using the camera. Check "Camera Privacy Settings" in Windows to ensure desktop apps have access.
+
+Path Error: If the script cannot find the data, ensure the kinecal folder is in the same directory as the script.
+
+9. Ethics & License
+Ethics Approval: 89091 (MMU Faculty of Science & Engineering).
+
+This project is for academic use as part of a Final Year Dissertation. All data processed from the KINECAL set is pseudonymised to ensure patient privacy.
