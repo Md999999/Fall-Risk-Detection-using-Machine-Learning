@@ -38,7 +38,7 @@ py -3.11 -m pip install opencv-python mediapipe pandas xgboost scipy scikit-lear
 
 C:\Users\mosop\KINECALWORK\
 │
-├── kinecal_pipeline.py    # Main script (trains the AI and gets metrics)
+├── Mosope_human_motion_analysis.py    # Main script (trains the AI and gets metrics)
 ├── livedemo.py            # The live webcam demo script
 ├── kinecal/               # Folder where the raw .npy dataset files go
 └── kinecal_outputs/       # Where all the generated files get saved
@@ -56,7 +56,7 @@ can run the live demo.
 2. Navigate to the project folder:
    cd C:\Users\mosop\KINECALWORK
 3. Run the training script:
-   py -3.11 kinecal_pipeline.py
+   py -3.11 Mosope_human_motion_analysis.py
 
 When you run this, the script will:
 * Load up the 3D `.npy` arrays from the `kinecal` folder.
