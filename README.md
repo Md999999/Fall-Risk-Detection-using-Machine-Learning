@@ -1,5 +1,3 @@
-Here is the updated, professional README.md file with the UX Prototype section removed. This version is now perfectly streamlined for your technical submission.
-
 Human Motion Analysis & Fall-Risk Assessment Pipeline
 Researcher: Mosope Dada
 
