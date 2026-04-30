@@ -17,7 +17,7 @@ and XGBoost). The AI then acts as a "Multi-Model Consensus" to classify
 a patient's fall risk based on objective metrics like sway and speed.
 
 There are two main scripts you need to run:
-1. kinecal_pipeline.py (Trains the AI)
+1. Mosope_human_motion_analysis.py (Trains the AI)
 2. livedemo.py (Tests it live using your webcam)
 
 
@@ -99,3 +99,23 @@ How to use it:
   for desktop apps" is toggled ON, otherwise Windows will block OpenCV 
   from using the lens.
 
+7. How to Download the KINECAL Dataset
+The KINECAL dataset is hosted on PhysioNet. Because the dataset is quite large, you have three options for downloading it. Choose the one that works best for your setup:
+
+Option 1: Direct ZIP Download
+You can manually download the entire dataset as a compressed file directly from your browser.
+
+Size: 86.2 GB
+
+Note: Please ensure you have a stable internet connection and sufficient disk space before starting this download.
+
+Option 2: Using the Terminal (wget)
+If you are on Linux, macOS, or using WSL on Windows, wget is highly recommended because it allows you to resume the download if your connection drops. Open your terminal and run:
+
+Bash
+wget -r -N -c -np https://physionet.org/files/kinecal/1.0.3/
+Option 3: Using AWS CLI (Fastest)
+If you have the AWS Command Line Interface installed, you can sync the files directly from PhysioNet's open S3 bucket. This is often the fastest method. Make sure to replace DESTINATION with the folder where you want to save the data (e.g., ./kinecal/):
+
+Bash
+aws s3 sync --no-sign-request s3://physionet-open/kinecal/1.0.3/ DESTINATION
