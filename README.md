@@ -86,7 +86,7 @@ How to use it:
 
 
 6. COMMON ERRORS & TROUBLESHOOTING
-----------------------------------------------------------------------
+
 * Error: "module 'mediapipe' has no attribute 'solutions'"
   Fix: This almost always means Windows is trying to use Python 3.12 or 
   3.13. Force it to use 3.11 by typing `py -3.11` instead of `python`. 
@@ -98,4 +98,4 @@ How to use it:
   Fix: Check your Windows Privacy Settings. Make sure "Camera access 
   for desktop apps" is toggled ON, otherwise Windows will block OpenCV 
   from using the lens.
-======================================================================
+
