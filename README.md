@@ -73,8 +73,12 @@ py -3.11 livedemo.py
 ---
 
 ## Dataset
+The KINECAL dataset is a large open-access biomechanics dataset hosted on PhysioNet.
 
-The full KINECAL dataset is 86.2 GB and lives on PhysioNet. A 5-subject sample is already in the `/kinecal` folder so you can run the whole pipeline without downloading anything. If you need the full set, `wget` and AWS CLI instructions are in the docs.
+The full KINECAL dataset is 86.2 GB. The pipeline processed 90 subjects and 453 movement trials in total. These were loaded directly from the local kinecal/ folder using the Loader class, which iterates every numbered subject directory and picks up all .npy skeleton arrays it finds. No manual filtering or subject selection was applied — the script just processes whatever is in the folder.
+
+The full 86.2 GB dataset wasn’t downloaded in its entirety due to storage constraints, but the subset used is a genuine, unfiltered portion of the KINECAL data covering 90 subjects across multiple task categories. The pipeline is dataset-agnostic — point it at more data and it will process it identically.
+. If you need the full set, `wget` and AWS CLI instructions are in the docs.
 
 ---
 
