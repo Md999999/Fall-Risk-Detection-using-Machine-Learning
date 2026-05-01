@@ -5,7 +5,7 @@ MMU Synoptic Project: Human Motion Analysis Pipeline
 Researcher: Mosope Dada
 Ethics Approval Number: 89091
 Description: This script performs feature extraction from the KINECAL dataset,
-             trains a multi-model consensus (SVM, RF, XGBoost) plus a baseline, 
+             trains a multi-model consensus (SVM, RF, XGBoost, LR), 
              and evaluates biomechanical fall risk.
 """
 
@@ -35,13 +35,9 @@ warnings.filterwarnings("ignore")
 
 @dataclass
 class Config:
-    # PORTABILITY FIX: Uses relative paths so the examiner can run the code
     base_script_path: Path = Path(__file__).resolve().parent
-    
-    # Folders located within the project directory
     base_dir: Path = base_script_path / "kinecal"
     output_dir: Path = base_script_path / "kinecal_outputs"
-    
     fps: int = 30
     min_frames_required: int = 10
     random_state: int = 42
@@ -59,11 +55,9 @@ class Loader:
         self.base = Path(base_dir)
         
     def load(self):
-        """Loads .npy skeleton data from the KINECAL directory structure."""
         records = []
         if not self.base.exists():
             print(f"CRITICAL ERROR: Data folder not found at {self.base}")
-            print("Please ensure the 'kinecal' folder is in the same directory as this script.")
             return records
 
         for subject in sorted(self.base.iterdir()):
@@ -137,7 +131,7 @@ class ModelComparison:
             "Random_Forest": RandomForestClassifier(n_estimators=200, max_depth=10, random_state=CFG.random_state),
             "XGBoost": XGBClassifier(n_estimators=200, max_depth=4, learning_rate=0.05, random_state=CFG.random_state, eval_metric='mlogloss'),
             "SVM": SVC(kernel='rbf', probability=True, random_state=CFG.random_state),
-            "Baseline_LR": LogisticRegression(max_iter=1000, random_state=CFG.random_state)
+            "Logistic_Reg": LogisticRegression(max_iter=1000, random_state=CFG.random_state)
         }
         self.trained_models = {}
 
@@ -174,25 +168,25 @@ class ModelComparison:
                 "F1-Score": f1
             })
 
-            # Save visuals for main models
-            if model_name != "Baseline_LR":
-                cm = confusion_matrix(y, y_pred_all, normalize='true')
-                disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.le.classes_)
-                disp.plot(cmap='Blues', values_format='.2f')
-                plt.title(f"{model_name} Confusion Matrix")
-                plt.savefig(CFG.output_dir / "figures" / f"cm_{model_name}.png", bbox_inches='tight')
-                plt.close()
+            # Save visuals for all models
+            cm = confusion_matrix(y, y_pred_all, normalize='true')
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.le.classes_)
+            disp.plot(cmap='Blues', values_format='.2f')
+            plt.title(f"{model_name} Confusion Matrix")
+            plt.savefig(CFG.output_dir / "figures" / f"cm_{model_name}.png", bbox_inches='tight')
+            plt.close()
 
             model.fit(X, y)
             self.trained_models[model_name] = model
 
         df_all = pd.DataFrame(results)
-        # Split baseline from main ranking table
-        main_table = df_all[df_all["Model"] != "Baseline_LR"].copy()
-        main_table["Rank (by F1)"] = main_table["F1-Score"].rank(ascending=False).astype(int)
-        baseline_acc = df_all.loc[df_all["Model"] == "Baseline_LR", "Accuracy"].values[0]
+        # Rank ALL models including Logistic Regression
+        df_all["Rank (by F1)"] = df_all["F1-Score"].rank(ascending=False).astype(int)
         
-        return main_table.sort_values("Rank (by F1)"), baseline_acc
+        # Get baseline accuracy for the final summary (using the LR row)
+        baseline_acc = df_all.loc[df_all["Model"] == "Logistic_Reg", "Accuracy"].values[0]
+        
+        return df_all.sort_values("Rank (by F1)"), baseline_acc
 
     def save(self, path):
         joblib.dump({"models": self.trained_models, "le": self.le, "cols": self.feature_cols}, path)
@@ -209,7 +203,6 @@ def run():
     comparer = ModelComparison()
     results_df, baseline_acc = comparer.train_and_compare(df)
     
-    # Save Model
     comparer.save(CFG.output_dir / "models" / "fall_risk_model.pkl")
     
     # --- FORMATTED OUTPUT START ---
@@ -217,17 +210,14 @@ def run():
     print(" MACHINE LEARNING MODEL RANKING (CROSS-VALIDATED)")
     print("="*80)
     
-    # Table Header
     header = f"{'Model':<15} {'Accuracy':<10} {'Precision':<10} {'Recall':<10} {'F1-Score':<10} {'Rank (by F1)'}"
     print(header)
     
-    # Table Rows
     for _, row in results_df.iterrows():
         print(f"{row['Model']:<15} {row['Accuracy']:<10.6f} {row['Precision']:<10.6f} {row['Recall']:<10.6f} {row['F1-Score']:<10.6f} {int(row['Rank (by F1)'])}")
     
     print("="*80 + "\n")
     
-    # Summary Section
     xgb = results_df[results_df["Model"] == "XGBoost"].iloc[0]
     improvement = ((xgb['Accuracy'] - baseline_acc) / baseline_acc) * 100
 
