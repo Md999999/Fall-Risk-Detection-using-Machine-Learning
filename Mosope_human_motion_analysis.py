@@ -5,19 +5,17 @@ MMU Synoptic Project: Human Motion Analysis Pipeline
 Researcher: Mosope Dada
 Ethics Approval Number: 89091
 Description: This script performs feature extraction from the KINECAL dataset,
-             trains a multi-model consensus (SVM, RF, XGBoost), and evaluates
-             biomechanical fall risk.
+             trains a multi-model consensus (SVM, RF, XGBoost) plus a baseline, 
+             and evaluates biomechanical fall risk.
 """
 
 import matplotlib
 matplotlib.use('Agg')
 import os
-import re
 import joblib
 import warnings
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -25,6 +23,7 @@ from sklearn.model_selection import GroupKFold
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, ConfusionMatrixDisplay
@@ -47,7 +46,6 @@ class Config:
     min_frames_required: int = 10
     random_state: int = 42
     n_splits: int = 5
-    target_mode: str = "biomechanical_risk" 
 
 CFG = Config()
 
@@ -79,7 +77,6 @@ class Loader:
                     continue
                 
                 arr = np.load(npys[0], allow_pickle=True)
-                # Handle different axis orderings if necessary
                 if arr.ndim == 3 and arr.shape[0] == 3: 
                     arr = np.transpose(arr, (2, 1, 0))
                 
@@ -95,11 +92,9 @@ class Loader:
 
 class FeatureExtractor:
     def pelvis(self, skeleton): 
-        """Extract Pelvis (Joint 0) X and Y coordinates."""
         return skeleton[:, 0, :2]
 
     def sway(self, traj):
-        """Calculate biomechanical sway metrics."""
         dist = np.linalg.norm(np.diff(traj, axis=0), axis=1)
         return {
             "total_distance": float(np.sum(dist)), 
@@ -123,7 +118,6 @@ class FeatureExtractor:
 
 class LabelBuilder:
     def build(self, df):
-        """Categorize fall risk based on sway thresholds."""
         labels = []
         for _, row in df.iterrows():
             if row["total_distance"] > 0.3 or row["rms_sway"] > 0.1:
@@ -140,14 +134,14 @@ class ModelComparison:
         self.le = LabelEncoder()
         self.feature_cols = None
         self.models_dict = {
-            "SVM": SVC(kernel='rbf', probability=True, random_state=CFG.random_state),
             "Random_Forest": RandomForestClassifier(n_estimators=200, max_depth=10, random_state=CFG.random_state),
-            "XGBoost": XGBClassifier(n_estimators=200, max_depth=4, learning_rate=0.05, random_state=CFG.random_state, use_label_encoder=False, eval_metric='mlogloss')
+            "XGBoost": XGBClassifier(n_estimators=200, max_depth=4, learning_rate=0.05, random_state=CFG.random_state, eval_metric='mlogloss'),
+            "SVM": SVC(kernel='rbf', probability=True, random_state=CFG.random_state),
+            "Baseline_LR": LogisticRegression(max_iter=1000, random_state=CFG.random_state)
         }
         self.trained_models = {}
 
     def get_features(self, df):
-        # Drop columns that shouldn't be used as training features
         X = df.drop(columns=["subject_id", "task", "target", "total_distance", "rms_sway", "mean_velocity"], errors="ignore").fillna(0.0)
         self.feature_cols = list(X.columns)
         return X
@@ -159,80 +153,91 @@ class ModelComparison:
         gkf = GroupKFold(n_splits=CFG.n_splits)
         
         results = []
-        
         for model_name, model in self.models_dict.items():
-            print(f"Cross-Validating {model_name}...")
             y_pred_all = np.zeros_like(y)
-            
-            # GroupKFold ensures a subject's data is never in both Train and Test
             for train_idx, test_idx in gkf.split(X, y, groups):
                 X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
                 y_train, y_test = y[train_idx], y[test_idx]
-                
                 model.fit(X_train, y_train)
                 y_pred_all[test_idx] = model.predict(X_test)
                 
-            # Metrics
             acc = accuracy_score(y, y_pred_all)
+            prec = precision_score(y, y_pred_all, average="weighted", zero_division=0)
+            rec = recall_score(y, y_pred_all, average="weighted", zero_division=0)
             f1 = f1_score(y, y_pred_all, average="weighted", zero_division=0)
             
             results.append({
                 "Model": model_name, 
-                "Accuracy": acc, 
+                "Accuracy": acc,
+                "Precision": prec,
+                "Recall": rec,
                 "F1-Score": f1
             })
-            
-            # Save Confusion Matrix
-            cm = confusion_matrix(y, y_pred_all, normalize='true')
-            disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.le.classes_)
-            disp.plot(cmap='Blues', values_format='.2f')
-            plt.title(f"{model_name} Confusion Matrix")
-            plt.savefig(CFG.output_dir / "figures" / f"cm_{model_name}.png", bbox_inches='tight')
-            plt.close()
 
-            # Train final version on all data
+            # Save visuals for main models
+            if model_name != "Baseline_LR":
+                cm = confusion_matrix(y, y_pred_all, normalize='true')
+                disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.le.classes_)
+                disp.plot(cmap='Blues', values_format='.2f')
+                plt.title(f"{model_name} Confusion Matrix")
+                plt.savefig(CFG.output_dir / "figures" / f"cm_{model_name}.png", bbox_inches='tight')
+                plt.close()
+
             model.fit(X, y)
             self.trained_models[model_name] = model
 
-        df_results = pd.DataFrame(results)
-        df_results["Rank"] = df_results["F1-Score"].rank(ascending=False).astype(int)
-        return df_results.sort_values("Rank"), X
+        df_all = pd.DataFrame(results)
+        # Split baseline from main ranking table
+        main_table = df_all[df_all["Model"] != "Baseline_LR"].copy()
+        main_table["Rank (by F1)"] = main_table["F1-Score"].rank(ascending=False).astype(int)
+        baseline_acc = df_all.loc[df_all["Model"] == "Baseline_LR", "Accuracy"].values[0]
+        
+        return main_table.sort_values("Rank (by F1)"), baseline_acc
 
     def save(self, path):
-        joblib.dump({
-            "models": self.trained_models, 
-            "label_encoder": self.le, 
-            "feature_cols": self.feature_cols
-        }, path)
+        joblib.dump({"models": self.trained_models, "le": self.le, "cols": self.feature_cols}, path)
 
 def run():
     print(f"Initializing Analysis Pipeline (Ethics Approval: 89091)")
     ensure_dirs()
     
-    # 1. Load Data
     records = Loader(CFG.base_dir).load()
-    if not records:
-        return
+    if not records: return
 
-    # 2. Extract Features & Build Labels
-    extractor = FeatureExtractor()
-    df = pd.DataFrame([extractor.extract(r) for r in records])
-    df = LabelBuilder().build(df)
+    df = LabelBuilder().build(pd.DataFrame([FeatureExtractor().extract(r) for r in records]))
     
-    # 3. Model Training & Comparison
     comparer = ModelComparison()
-    results_df, _ = comparer.train_and_compare(df)
+    results_df, baseline_acc = comparer.train_and_compare(df)
     
-    # 4. Save Final Multi-Model Object
-    model_save_path = CFG.output_dir / "models" / "fall_risk_model.pkl"
-    comparer.save(model_save_path)
+    # Save Model
+    comparer.save(CFG.output_dir / "models" / "fall_risk_model.pkl")
     
-    print("\n" + "="*50)
-    print("      FINAL MACHINE LEARNING MODEL RANKING")
-    print("="*50)
-    print(results_df.to_string(index=False))
-    print("="*50)
-    print(f"Artefacts saved to: {CFG.output_dir}")
+    # --- FORMATTED OUTPUT START ---
+    print("\n" + "="*80)
+    print(" MACHINE LEARNING MODEL RANKING (CROSS-VALIDATED)")
+    print("="*80)
+    
+    # Table Header
+    header = f"{'Model':<15} {'Accuracy':<10} {'Precision':<10} {'Recall':<10} {'F1-Score':<10} {'Rank (by F1)'}"
+    print(header)
+    
+    # Table Rows
+    for _, row in results_df.iterrows():
+        print(f"{row['Model']:<15} {row['Accuracy']:<10.6f} {row['Precision']:<10.6f} {row['Recall']:<10.6f} {row['F1-Score']:<10.6f} {int(row['Rank (by F1)'])}")
+    
+    print("="*80 + "\n")
+    
+    # Summary Section
+    xgb = results_df[results_df["Model"] == "XGBoost"].iloc[0]
+    improvement = ((xgb['Accuracy'] - baseline_acc) / baseline_acc) * 100
+
+    print(f"XGBoost Accuracy:   {xgb['Accuracy']:.4f}")
+    print(f"XGBoost Precision:  {xgb['Precision']:.4f}")
+    print(f"XGBoost Recall:     {xgb['Recall']:.4f}")
+    print(f"XGBoost F1-Score:   {xgb['F1-Score']:.4f}")
+    print(f"Baseline LR Acc:    {baseline_acc:.4f}")
+    print(f"--> XGBoost outperformed baseline by {improvement:.2f}%")
+    # --- FORMATTED OUTPUT END ---
 
 if __name__ == "__main__":
     run()
