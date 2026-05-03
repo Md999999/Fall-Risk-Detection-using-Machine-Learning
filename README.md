@@ -1,6 +1,3 @@
-Here's the README rewritten to sound like a real person wrote it:
-
-
 # KINECAL — Markerless Motion Pipeline & Live Demo
 **Final Year Dissertation | Mosope Dada | Ethics Approval: 89091**
 
