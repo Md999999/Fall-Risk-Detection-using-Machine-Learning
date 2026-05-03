@@ -85,11 +85,15 @@ This is the most stable way to download large files without interruption.
 
 Bash
 wget -r -N -c -np https://physionet.org/files/kinecal/1.0.3/
+
+
 Option 2: Using AWS CLI
 If you have AWS command line tools installed, you can sync the bucket directly to your destination folder.
 
 Bash
 aws s3 sync --no-sign-request s3://physionet-open/kinecal/1.0.3/ ./kinecal/
+
+
 Option 3: Direct ZIP Download
 You can attempt to download the 86.2 GB ZIP file directly through your browser from the PhysioNet project page, though terminal methods are recommended for stability.
 
