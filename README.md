@@ -77,6 +77,22 @@ The full KINECAL dataset is 86.2 GB. The pipeline processed 90 subjects and 453 
 The full 86.2 GB dataset wasn’t downloaded in its entirety due to storage constraints, but the subset used is a genuine, unfiltered portion of the KINECAL data covering 90 subjects across multiple task categories. The pipeline is dataset-agnostic — point it at more data and it will process it identically.
 . If you need the full set, `wget` and AWS CLI instructions are in the docs.
 
+Download Instructions (Version 1.0.3)
+The pipeline is dataset-agnostic — point it at more data and it will process it identically. To get the full dataset, choose one of the following methods:
+
+Option 1: Using wget (Terminal/Command Prompt — Recommended)
+This is the most stable way to download large files without interruption.
+
+Bash
+wget -r -N -c -np https://physionet.org/files/kinecal/1.0.3/
+Option 2: Using AWS CLI
+If you have AWS command line tools installed, you can sync the bucket directly to your destination folder.
+
+Bash
+aws s3 sync --no-sign-request s3://physionet-open/kinecal/1.0.3/ ./kinecal/
+Option 3: Direct ZIP Download
+You can attempt to download the 86.2 GB ZIP file directly through your browser from the PhysioNet project page, though terminal methods are recommended for stability.
+
 ---
 
 ## Troubleshooting
